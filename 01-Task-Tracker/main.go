@@ -2,7 +2,6 @@ package main
 import (
 	"fmt"
 	"encoding/json"
-	"errors"
 	"os"
 )
 
@@ -12,42 +11,44 @@ type Task struct{
 	Status string `json:"status"`
 }
 
-func saveTasks(tasks []Task){
+func saveTasks(tasks []Task) error{
 	jsonData, err := json.MarshalIndent(tasks, "", "\t")
 	if err != nil{
-		fmt.Print(err)
-		return
+		return err
 	}
 
-	text := []byte(jsonData)
-	os.WriteFile("tasks.json", text, 0644)
+	err = os.WriteFile("tasks.json", jsonData, 0644)
+	if err != nil{
+		return err
+	}
+	return nil
 }
 
-func loadTasks(){
+func loadTasks() ([]Task, error){
 	_, err := os.Stat("tasks.json")
 	
-	if errors.Is(err, os.ErrNotExist){
-		fmt.Println("file doesn't exits")
-		return
+	if err != nil{
+		if errors.Is(err, os.ErrNotExist){
+			return []Task{}, nil
+		}
+		return nil, err
 	}
 
 	data, err := os.ReadFile("tasks.json")
 
 	if err != nil{
-		fmt.Println(err)
-		return
+		return nil, err
 	}
 
-	var task2 []Task
+	var tasks []Task
 
-	err2 := json.Unmarshal(data, &task2)
+	err = json.Unmarshal(data, &tasks)
 
-	if err2 != nil{
-		fmt.Println(err)
-		return
+	if err != nil{
+		return nil, err
 	}
 
-	fmt.Println(task2)
+	return tasks, nil
 }
 
 
@@ -65,10 +66,21 @@ func main(){
 		},
 	}
 
-	saveTasks(task)
+	err := saveTasks(task)
+	if err != nil{
+		fmt.Println(err)
+		return
+	}
 
 	fmt.Println("task saved")
 
-	loadTasks()
+	tasks, err := loadTasks()
+
+	if err != nil{
+		fmt.Println(err)
+		return
+	}
+
+	fmt.Println(tasks)
 
 }
